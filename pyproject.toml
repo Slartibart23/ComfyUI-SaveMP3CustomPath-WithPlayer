@@ -1,0 +1,18 @@
+[project]
+name = "comfyui-savemp3custompath-withplayer"
+description = "ComfyUI node: Save AUDIO as MP3 to any custom path with selectable bitrate (128k/256k), inline audio player and optional workflow JSON export."
+version = "1.2.0"
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "imageio-ffmpeg",
+]
+
+[project.urls]
+Repository = "https://github.com/YOUR_GITHUB_USER/ComfyUI-SaveMP3CustomPath-WithPlayer"
+
+[tool.comfy]
+PublisherId = "YOUR_GITHUB_USER"
+DisplayName = "Save MP3 (Custom Path) with Player"
+Icon = ""

@@ -1,0 +1,4 @@
+# Optionaler Fallback, falls ffmpeg nicht im System-PATH liegt.
+# torch und torchaudio sind bereits Teil jeder ComfyUI-Installation
+# und werden hier nicht erneut aufgefuehrt.
+imageio-ffmpeg
