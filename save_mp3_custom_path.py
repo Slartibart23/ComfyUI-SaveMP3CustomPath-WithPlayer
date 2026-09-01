@@ -7,17 +7,22 @@ mit einstellbarer Bitrate (128k / 256k) und blendet zusaetzlich
 einen Audio-Player im Node ein. Optional wird der komplette Workflow
 als .json mit gleichem Dateinamen im selben Ordner mitgespeichert.
 
+Zusaetzlich gibt es einen optionalen Text-Input (z.B. vom Prompt
+oder einer beliebigen Text-Node). Ist dieser verbunden, wird der
+Text als <dateiname>.txt (UTF-8) mit exakt demselben Dateinamen
+wie die MP3 im selben Ordner abgelegt (inkl. Counter-Logik).
+
 Encoding-Strategie:
-  1. Audio-Tensor wird als float32-PCM in numpy konvertiert.
-  2. Rohdaten gehen direkt via stdin-Pipe an ffmpeg (libmp3lame).
-     Damit ist die Node unabhaengig von torchaudio.save() bzw.
-     torchcodec, was bei einigen ComfyUI-Builds fehlt.
-  3. Fuer die Vorschau im Node wird eine Kopie ins ComfyUI temp-
-     Verzeichnis gelegt und ueber das Standard-Audio-Preview-Widget
-     angezeigt.
-  4. Workflow wird via hidden 'extra_pnginfo' aus ComfyUI uebernommen
-     und als <dateiname>.json gespeichert (im UI-Format, ladbar via
-     'Load' in ComfyUI).
+1. Audio-Tensor wird als float32-PCM in numpy konvertiert.
+2. Rohdaten gehen direkt via stdin-Pipe an ffmpeg (libmp3lame).
+   Damit ist die Node unabhaengig von torchaudio.save() bzw.
+   torchcodec, was bei einigen ComfyUI-Builds fehlt.
+3. Fuer die Vorschau im Node wird eine Kopie ins ComfyUI temp-
+   Verzeichnis gelegt und ueber das Standard-Audio-Preview-Widget
+   angezeigt.
+4. Workflow wird via hidden 'extra_pnginfo' aus ComfyUI uebernommen
+   und als <dateiname>.json gespeichert (im UI-Format, ladbar via
+   'Load' in ComfyUI).
 """
 
 import json
@@ -59,6 +64,8 @@ class SaveAudioMP3CustomPath:
     """
     Speichert AUDIO als MP3 an einem absoluten Pfad.
     Zeigt einen Audio-Player im Node zur Vorschau / Wiedergabe.
+    Speichert optional einen verbundenen Text als .txt mit
+    identischem Dateinamen.
     """
 
     @classmethod
@@ -101,6 +108,16 @@ class SaveAudioMP3CustomPath:
                     },
                 ),
             },
+            "optional": {
+                "text": (
+                    "STRING",
+                    {
+                        "forceInput": True,
+                        "multiline": True,
+                        "tooltip": "Optionaler Text-Input (z.B. Prompt). Wird als <dateiname>.txt mit identischem Dateinamen gespeichert.",
+                    },
+                ),
+            },
             "hidden": {
                 "prompt": "PROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO",
@@ -113,7 +130,6 @@ class SaveAudioMP3CustomPath:
     CATEGORY = "audio/save"
 
     # ------------------------------------------------------------------ #
-
     def _encode_mp3(self, waveform: torch.Tensor, sample_rate: int,
                     target_path: str, bitrate: str) -> None:
         """
@@ -137,6 +153,7 @@ class SaveAudioMP3CustomPath:
         waveform_np = waveform.detach().cpu().to(torch.float32).numpy()
         if waveform_np.ndim == 1:
             waveform_np = waveform_np[np.newaxis, :]
+
         num_channels = waveform_np.shape[0]
 
         # ffmpeg erwartet interleaved samples: [t0c0, t0c1, t1c0, t1c1, ...]
@@ -153,15 +170,16 @@ class SaveAudioMP3CustomPath:
             "-b:a", bitrate,
             target_path,
         ]
+
         result = subprocess.run(cmd, input=interleaved, capture_output=True)
         if result.returncode != 0:
             err = result.stderr.decode("utf-8", errors="replace")
             raise RuntimeError(f"ffmpeg-Encoding fehlgeschlagen:\n{err}")
 
     # ------------------------------------------------------------------ #
-
     def save_mp3(self, audio, output_path, filename, quality, overwrite,
-                 save_workflow, prompt=None, extra_pnginfo=None):
+                 save_workflow, text=None, prompt=None, extra_pnginfo=None):
+
         # --- Pfad / Dateiname vorbereiten -------------------------------
         output_path = os.path.normpath(output_path.strip())
         os.makedirs(output_path, exist_ok=True)
@@ -189,6 +207,7 @@ class SaveAudioMP3CustomPath:
         # [Batch, Channels, Time] -> [Channels, Time]
         if waveform.dim() == 3:
             waveform = waveform[0]
+
         if waveform.is_cuda:
             waveform = waveform.cpu()
         waveform = waveform.to(torch.float32)
@@ -196,6 +215,16 @@ class SaveAudioMP3CustomPath:
         # --- MP3 encoden ------------------------------------------------
         self._encode_mp3(waveform, sample_rate, full_path, quality)
         print(f"[SaveAudioMP3CustomPath] gespeichert: {full_path}")
+
+        # --- Text als TXT speichern (falls Input verbunden) -------------
+        if text is not None:
+            txt_path = os.path.splitext(full_path)[0] + ".txt"
+            try:
+                with open(txt_path, "w", encoding="utf-8") as f:
+                    f.write(text)
+                print(f"[SaveAudioMP3CustomPath] Text gespeichert: {txt_path}")
+            except Exception as e:
+                print(f"[SaveAudioMP3CustomPath] Text-Speicherung fehlgeschlagen: {e}")
 
         # --- Workflow als JSON speichern -------------------------------
         if save_workflow:
@@ -246,7 +275,6 @@ class SaveAudioMP3CustomPath:
 # ---------------------------------------------------------------------- #
 # ComfyUI Registrierung
 # ---------------------------------------------------------------------- #
-
 NODE_CLASS_MAPPINGS = {
     "SaveAudioMP3CustomPath": SaveAudioMP3CustomPath,
 }

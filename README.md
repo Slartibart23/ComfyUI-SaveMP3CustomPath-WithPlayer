@@ -4,7 +4,7 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![ComfyUI](https://img.shields.io/badge/ComfyUI-custom%20node-purple)
 
-Ein ComfyUI Custom Node, der **generiertes Audio als MP3** an einem **frei wählbaren absoluten Pfad** speichert (z. B. `D:\omnivoice\person1` oder `E:\luca\proj01`), einen **Audio-Player direkt im Node** einblendet und auf Wunsch den kompletten **Workflow als JSON** mit identischem Dateinamen daneben ablegt.
+Ein ComfyUI Custom Node, der **generiertes Audio als MP3** an einem **frei wählbaren absoluten Pfad** speichert (z. B. `D:\omnivoice\person1` oder `E:\luca\proj01`), einen **Audio-Player direkt im Node** einblendet und auf Wunsch den kompletten **Workflow als JSON** mit identischem Dateinamen daneben ablegt. Über einen optionalen **Text-Input** (z. B. Prompt oder beliebige Text-Node) wird der Text zusätzlich als **`.txt` mit exakt demselben Dateinamen** gespeichert.
 
 ---
 
@@ -14,6 +14,7 @@ Ein ComfyUI Custom Node, der **generiertes Audio als MP3** an einem **frei wähl
 - [Installation](#installation)
 - [Benutzung](#benutzung)
 - [Parameter](#parameter)
+- [Text-Datei (TXT)](#text-datei-txt)
 - [Workflow-JSON](#workflow-json)
 - [Troubleshooting](#troubleshooting)
 - [Lizenz](#lizenz)
@@ -27,6 +28,7 @@ Ein ComfyUI Custom Node, der **generiertes Audio als MP3** an einem **frei wähl
 - 🎚️ **Bitrate wählbar** — `128k` oder `256k`
 - 🔢 **Automatischer Counter** — `audio_00001.mp3`, `audio_00002.mp3`, … (oder Überschreiben)
 - 🎧 **Audio-Player direkt im Node** — anhören ohne Datei extern zu öffnen
+- 📝 **Text-Input** — optional verbundener Text (z. B. Prompt) wird als `<dateiname>.txt` mit identischem Dateinamen gespeichert
 - 🧩 **Workflow-JSON** — speichert den kompletten Workflow als `<dateiname>.json` im selben Ordner
 - ⚡ **Robust** — Encoding direkt über ffmpeg-stdin-Pipe, keine Abhängigkeit von torchaudio/torchcodec
 
@@ -40,7 +42,7 @@ Ein ComfyUI Custom Node, der **generiertes Audio als MP3** an einem **frei wähl
 
 ### Variante 2: Manuell mit GitHub Desktop / git clone
 
-```bash
+```
 cd ComfyUI/custom_nodes
 git clone https://github.com/YOUR_GITHUB_USER/ComfyUI-SaveMP3CustomPath-WithPlayer.git
 ```
@@ -67,13 +69,13 @@ Der Node nutzt **ffmpeg** zum MP3-Encoding. Wähle einen der beiden Wege:
 
 **B) Über pip (im ComfyUI-Python-Environment)**
 
-```bash
+```
 pip install imageio-ffmpeg
 ```
 
 Bei einer portablen Windows-Installation:
 
-```bash
+```
 python_embeded\python.exe -m pip install imageio-ffmpeg
 ```
 
@@ -91,18 +93,31 @@ Oder per Doppelklick auf den Canvas → `Save MP3` eintippen.
 
 Den `audio`-Output deines TTS- / Audio-Generator-Nodes mit dem `audio`-Input dieses Nodes verbinden, Pfad und Dateinamen eintragen, Workflow ausführen — fertig. Im Node erscheint anschließend der Audio-Player zum direkten Anhören.
 
+Optional: Den **`text`-Input** mit einer beliebigen Text-Quelle verbinden (z. B. dem Prompt deiner TTS-Node oder einer Text-Node). Ist der Input verbunden, wird der Text automatisch als `.txt` mit identischem Dateinamen neben der MP3 abgelegt. Ohne verbundenen Input funktioniert der Node wie gewohnt — es wird dann einfach keine Text-Datei erzeugt.
+
 ---
 
 ## Parameter
 
-| Parameter | Typ | Beschreibung |
-|---|---|---|
-| `audio` | AUDIO | Audio-Input vom vorherigen Node |
-| `output_path` | STRING | Zielordner, z. B. `D:\omnivoice\person1` — wird angelegt, falls nicht vorhanden |
-| `filename` | STRING | Dateiname ohne Endung, z. B. `voice_take` → wird zu `voice_take.mp3` |
-| `quality` | `128k` / `256k` | MP3 Bitrate |
-| `overwrite` | BOOLEAN | `True` = vorhandene Datei überschreiben. `False` = Counter anhängen |
-| `save_workflow` | BOOLEAN | `True` = Workflow zusätzlich als `<dateiname>.json` im selben Ordner ablegen |
+| Parameter       | Typ             | Beschreibung                                                                    |
+| --------------- | --------------- | ------------------------------------------------------------------------------- |
+| `audio`         | AUDIO           | Audio-Input vom vorherigen Node                                                 |
+| `text`          | STRING (optional, nur Input) | Optionaler Text-Input (z. B. Prompt). Wird als `<dateiname>.txt` gespeichert |
+| `output_path`   | STRING          | Zielordner, z. B. `D:\omnivoice\person1` — wird angelegt, falls nicht vorhanden |
+| `filename`      | STRING          | Dateiname ohne Endung, z. B. `voice_take` → wird zu `voice_take.mp3`            |
+| `quality`       | `128k` / `256k` | MP3 Bitrate                                                                     |
+| `overwrite`     | BOOLEAN         | `True` = vorhandene Datei überschreiben. `False` = Counter anhängen             |
+| `save_workflow` | BOOLEAN         | `True` = Workflow zusätzlich als `<dateiname>.json` im selben Ordner ablegen    |
+
+---
+
+## Text-Datei (TXT)
+
+Ist der `text`-Input verbunden, wird der Text bei jedem Run als **UTF-8-kodierte `.txt`** im selben Ordner gespeichert — mit **exakt demselben Dateinamen** wie die MP3:
+
+- Bei aktivem Counter bleibt das Namens-Trio erhalten: `voice_take_00003.mp3` ↔ `voice_take_00003.txt` ↔ `voice_take_00003.json`
+- Es gibt keinen separaten Schalter: verbundener Input = Text wird gespeichert, kein Input = keine Text-Datei
+- So liegt zu jeder Audio-Datei automatisch der zugehörige Prompt/Text dabei
 
 ---
 
@@ -118,17 +133,15 @@ Mit `save_workflow = True` wird der aktuelle Workflow im **UI-Format** gespeiche
 
 ## Troubleshooting
 
-**`ffmpeg wurde nicht gefunden`**
-→ Siehe Installation, Abschnitt *ffmpeg-Voraussetzung*. Entweder ffmpeg in den PATH legen, oder `pip install imageio-ffmpeg` im ComfyUI-Environment ausführen.
+**`ffmpeg wurde nicht gefunden`** → Siehe Installation, Abschnitt *ffmpeg-Voraussetzung*. Entweder ffmpeg in den PATH legen, oder `pip install imageio-ffmpeg` im ComfyUI-Environment ausführen.
 
-**Datei wird gespeichert, aber Player erscheint nicht**
-→ Browser-Cache leeren (Strg+F5). Das Audio liegt in jedem Fall am Zielort. Falls weiterhin kein Player erscheint: Node aus dem Workflow entfernen und neu hinzufügen.
+**Datei wird gespeichert, aber Player erscheint nicht** → Browser-Cache leeren (Strg+F5). Das Audio liegt in jedem Fall am Zielort. Falls weiterhin kein Player erscheint: Node aus dem Workflow entfernen und neu hinzufügen.
 
-**Backslashes in Pfaden**
-→ Müssen im Node-Feld **nicht** verdoppelt werden — `D:\omnivoice\person1` reicht.
+**Text-Input erscheint nicht am Node** → Nach dem Update den Node einmal aus dem Workflow entfernen und neu hinzufügen (ComfyUI cached die Node-Definition im Workflow).
 
-**Stereo / Mehrkanal**
-→ Bei `[Batch, Channels, Time]`-Tensor wird das erste Batch-Element genommen, Kanäle bleiben erhalten.
+**Backslashes in Pfaden** → Müssen im Node-Feld **nicht** verdoppelt werden — `D:\omnivoice\person1` reicht.
+
+**Stereo / Mehrkanal** → Bei `[Batch, Channels, Time]`-Tensor wird das erste Batch-Element genommen, Kanäle bleiben erhalten.
 
 ---
 
