@@ -44,7 +44,7 @@ Ein ComfyUI Custom Node, der **generiertes Audio als MP3** an einem **frei wähl
 
 ```
 cd ComfyUI/custom_nodes
-git clone https://github.com/YOUR_GITHUB_USER/ComfyUI-SaveMP3CustomPath-WithPlayer.git
+git clone https://github.com/Slartibart23/ComfyUI-SaveMP3CustomPath-WithPlayer.git
 ```
 
 Anschließend ComfyUI neu starten.
