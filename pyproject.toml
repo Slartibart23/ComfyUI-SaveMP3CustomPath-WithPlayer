@@ -10,9 +10,9 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/YOUR_GITHUB_USER/ComfyUI-SaveMP3CustomPath-WithPlayer"
+Repository = "https://github.com/Slartibart23/ComfyUI-SaveMP3CustomPath-WithPlayer"
 
 [tool.comfy]
-PublisherId = "YOUR_GITHUB_USER"
+PublisherId = "slartibart23b"
 DisplayName = "Save MP3 (Custom Path) with Player"
 Icon = ""
